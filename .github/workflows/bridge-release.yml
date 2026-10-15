@@ -51,6 +51,6 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          tag="bridge-v0.1.0"
-          gh release view "$tag" >/dev/null 2>&1 || gh release create "$tag" --title "VMC Bridge 0.1.0" --notes "Downloadable helper that forwards a phone's VMC tracking to https://ccavins.github.io/VMC_app/"
+          tag="bridge-v0.1.1"
+          gh release view "$tag" >/dev/null 2>&1 || gh release create "$tag" --title "VMC Bridge 0.1.1" --notes "Open VMC Bridge. It receives the phone's tracking and the studio page connects to it. https://ccavins.github.io/VMC_app/"
           gh release upload "$tag" zips/*/*.zip --clobber

@@ -42,25 +42,6 @@ async function nodeBinary() {
     : path.join(extract, folder, 'bin', 'node');
 }
 
-const README = `VMC Bridge
-=========
-
-This small program receives VMC tracking from your phone and hands it to the
-studio page at https://ccavins.github.io/VMC_app/
-
-1. Run "Start VMC Bridge" and leave the window open.
-2. macOS: if it says the app can't be opened, right-click it and choose Open.
-   Windows: if SmartScreen appears, choose More info, then Run anyway.
-   Allow the firewall prompt on private networks so the phone can reach this computer.
-3. In the phone's VMC app, set the destination to the address printed in the
-   window and port 39539. That address is this computer, not the phone.
-4. Open the studio page in Chrome, Edge, or Firefox on THIS computer.
-   It connects to the bridge on its own. If the page was already open, click Connect.
-
-The browser and this program have to be on the same computer. The phone only
-sends tracking; it does not need to show the page.
-`;
-
 function run(cmd, args) {
   const r = spawnSync(cmd, args, { stdio: 'inherit' });
   if (r.status !== 0) throw new Error(`${cmd} ${args.join(' ')} failed (${r.status})`);
@@ -70,7 +51,7 @@ async function zipDir(folder, zipPath) {
   await rm(zipPath, { force: true });
   const r = platform === 'win32'
     ? spawnSync('powershell', ['-NoProfile', '-Command', `Compress-Archive -Path '${folder}\\*' -DestinationPath '${zipPath}' -Force`], { stdio: 'inherit' })
-    : spawnSync('zip', ['-r', '-q', zipPath, path.basename(folder)], { cwd: path.dirname(folder), stdio: 'inherit' });
+    : spawnSync('ditto', ['-c', '-k', '--keepParent', path.join(folder, 'VMC Bridge.app'), zipPath], { stdio: 'inherit' });
   if (r.status !== 0) throw new Error('zip failed');
 }
 
@@ -93,6 +74,7 @@ await esbuild.build({
   outfile: bundle,
   // Node's own modules stay in the executable. `ws` is bundled.
   external: ['node:*'],
+  banner: { js: "process.env.NODE_NO_WARNINGS='1';" },
 });
 
 await writeFile(path.join(outDir, 'sea-config.json'), JSON.stringify({
@@ -116,29 +98,31 @@ if (platform === 'darwin') run('codesign', ['--sign', '-', bin]);
 await chmod(bin, 0o755);
 
 const stage = path.join(outDir, product);
+await rm(stage, { recursive: true, force: true });
 await mkdir(stage, { recursive: true });
-await copyFile(bin, path.join(stage, binName));
-await writeFile(path.join(stage, 'README.txt'), README);
 if (platform === 'darwin') {
-  const command = `#!/bin/bash
-cd "$(dirname "$0")"
-chmod +x ./vmc-bridge
-xattr -d com.apple.quarantine ./vmc-bridge 2>/dev/null || true
-# The executable warns once that it cannot load optional native addons. It runs without them.
-export NODE_NO_WARNINGS=1
-./vmc-bridge
-`;
-  await writeFile(path.join(stage, 'Start VMC Bridge.command'), command);
-  await chmod(path.join(stage, 'Start VMC Bridge.command'), 0o755);
+  const app = path.join(stage, 'VMC Bridge.app');
+  const macos = path.join(app, 'Contents', 'MacOS');
+  await mkdir(macos, { recursive: true });
+  await copyFile(bin, path.join(macos, 'vmc-bridge'));
+  await chmod(path.join(macos, 'vmc-bridge'), 0o755);
+  await writeFile(path.join(app, 'Contents', 'Info.plist'), `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+  <key>CFBundleExecutable</key><string>vmc-bridge</string>
+  <key>CFBundleIdentifier</key><string>com.ccavins.vmc-bridge</string>
+  <key>CFBundleName</key><string>VMC Bridge</string>
+  <key>CFBundleDisplayName</key><string>VMC Bridge</string>
+  <key>CFBundlePackageType</key><string>APPL</string>
+  <key>CFBundleShortVersionString</key><string>0.1.1</string>
+  <key>CFBundleVersion</key><string>0.1.1</string>
+  <key>LSMinimumSystemVersion</key><string>12.0</string>
+  <key>NSHighResolutionCapable</key><true/>
+</dict></plist>
+`);
+  run('codesign', ['--force', '--sign', '-', app]);
 } else {
-  const bat = `@echo off
-cd /d "%~dp0"
-set NODE_NO_WARNINGS=1
-vmc-bridge.exe
-echo.
-pause
-`;
-  await writeFile(path.join(stage, 'Start VMC Bridge.bat'), bat);
+  await copyFile(bin, path.join(stage, 'VMC Bridge.exe'));
 }
 
 const zipPath = path.join(outDir, `${product}.zip`);

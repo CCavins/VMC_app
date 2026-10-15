@@ -351,25 +351,53 @@ export function startBridge(opts: BridgeStartOptions = {}) {
     console.log(`[bridge] http/ws on ${where}  (ws path /ws)`);
     const ips = localAddresses();
     if (opts.companion) {
-      console.log('');
-      console.log('VMC Bridge is running. Leave this window open.');
-      console.log('');
-      console.log('On the phone\'s VMC app, set the destination to one of these addresses');
-      console.log(`and port ${config.listenPort}:`);
-      if (ips.length) for (const a of ips) console.log(`  ${a.address}   (${a.iface})`);
-      else console.log('  (no network address found — connect this computer to Wi-Fi)');
-      console.log('');
-      console.log('Then use the studio page. It connects to this bridge on its own:');
-      console.log(`  ${pageUrl}`);
-      console.log('');
-      if (opts.openBrowser !== false) openPage(pageUrl);
+      const addresses = ips.length ? ips.map((a) => a.address).join('\n') : '(no Wi-Fi address found)';
+      const message = [
+        'VMC Bridge is running. Leave it running (it stays in the Dock).',
+        '',
+        'On the phone\'s VMC app, set the destination to:',
+        addresses,
+        `Port: ${config.listenPort}`,
+        '',
+        'The studio page will open in your browser and connect on its own.',
+      ].join('\n');
+      console.log(`\n${message}\n${pageUrl}\n`);
+      if (opts.openBrowser !== false) {
+        notify('VMC Bridge', message);
+        openPage(pageUrl);
+      }
     } else {
       console.log(`[bridge] point your VMC sender at one of this machine's IPs: ${ips.map((a) => `${a.address} (${a.iface})`).join(', ') || 'none found'}`);
     }
-    void startUdp().then(updateTestSignal);
+    void startUdp().then(() => {
+      updateTestSignal();
+      if (opts.companion && udpError) {
+        notify('VMC Bridge', `The phone's port ${config.listenPort} is already in use.\n\nQuit the other VMC Bridge, or stop npm run dev, then open this again.\n\n${udpError}`);
+      }
+    });
   };
+  httpServer.once('error', (err: NodeJS.ErrnoException) => {
+    const message = err.code === 'EADDRINUSE'
+      ? `VMC Bridge could not start because port ${HTTP_PORT} is already in use.\n\nQuit the other copy, or stop npm run dev, then open this again.\n\nIf the studio dev server is already running, click Connect on the website instead.`
+      : `VMC Bridge could not start.\n\n${err.message}`;
+    console.error(message);
+    if (opts.companion) notify('VMC Bridge', message);
+    setTimeout(() => process.exit(1), 300);
+  });
   if (opts.host) httpServer.listen(HTTP_PORT, opts.host, onListen);
   else httpServer.listen(HTTP_PORT, onListen);
+}
+
+function notify(title: string, message: string) {
+  try {
+    if (process.platform === 'darwin') {
+      const q = (s: string) => s.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+      spawn('osascript', ['-e', `display dialog "${q(message)}" with title "${q(title)}" buttons {"OK"} default button "OK"`], { detached: true, stdio: 'ignore' }).unref();
+    } else if (process.platform === 'win32') {
+      const ps = `Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.MessageBox]::Show(${JSON.stringify(message)}, ${JSON.stringify(title)})`;
+      spawn('powershell', ['-NoProfile', '-WindowStyle', 'Hidden', '-Command', ps], { detached: true, stdio: 'ignore', windowsHide: true }).unref();
+    }
+  } catch { /* stdout still has the message */ }
 }
 
 function openPage(url: string) {

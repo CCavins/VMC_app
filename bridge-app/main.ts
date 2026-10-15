@@ -4,6 +4,8 @@
  */
 import { startBridge } from '../server/index';
 
+process.title = 'VMC Bridge';
+
 const openBrowser = process.env.BRIDGE_OPEN !== '0';
 startBridge({
   host: process.env.BRIDGE_HOST || '127.0.0.1',

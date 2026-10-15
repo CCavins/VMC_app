@@ -106,9 +106,9 @@ function BridgeDownload() {
   return (
     <div className="bridge-download">
       <div className="hint">
-        This page cannot receive the phone's UDP stream. Download the VMC Bridge, unzip it, and run
-        <strong> Start VMC Bridge</strong>. Leave that window open. It prints the address to put in the phone's VMC app
-        (port 39539) and this page connects to it automatically.
+        This page cannot receive the phone's UDP stream. Download the VMC Bridge, unzip it, and open
+        <strong> VMC Bridge</strong>. A window tells you the address to put in the phone's VMC app (port 39539).
+        Leave the app running. This page connects to it on its own.
       </div>
       <div className="button-row">
         {BRIDGE_DOWNLOADS.map((d) => (
@@ -119,7 +119,7 @@ function BridgeDownload() {
         <button className="btn" onClick={() => retryBridgeConnection()}>Connect</button>
       </div>
       <div className="hint">
-        macOS may block the first launch. Right-click <strong>Start VMC Bridge</strong> and choose Open.
+        macOS may block the first open. Right-click <strong>VMC Bridge</strong> and choose Open.
         On Windows, if SmartScreen appears choose More info, then Run anyway, and allow the firewall prompt on private networks.
         Use Chrome, Edge, or Firefox. The browser has to be on the same computer as the bridge.
       </div>

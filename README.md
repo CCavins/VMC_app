@@ -7,9 +7,9 @@ standing on a podium you can orbit in 360°.
 **Hosted preview:** [ccavins.github.io/VMC_app](https://ccavins.github.io/VMC_app/)
 
 The preview has every character, dance, idle mode and podium. Live tracking from that
-page uses the **VMC Bridge**, a small Mac or Windows program you download from the
-Network panel. It receives the phone's UDP stream and the page connects to it on this
-computer. `npm run dev` remains the way to run everything from the repo.
+page uses the **VMC Bridge**, a small Mac or Windows app you download from the
+Network panel. Open it once; it receives the phone's UDP stream and the page connects
+to it on this computer. `npm run dev` remains the way to run everything from the repo.
 
 ```
 phone (VMC / OSC over UDP :39539)  ->  server/  Node bridge  ->  WebSocket  ->  browser (React + three.js)

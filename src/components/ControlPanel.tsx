@@ -15,7 +15,7 @@ const STATUS_PLACEMENTS: { value: StatusPlacement; label: string }[] = [
 
 const CAMERA_PRESETS: { id: CameraPreset; label: string }[] = [
   { id: 'full', label: 'Full body' },
-  { id: 'upper', label: 'Upper body' },
+  { id: 'upper', label: 'Waist up' },
   { id: 'face', label: 'Face' },
   { id: 'hands', label: 'Hands' },
   { id: 'orbit', label: 'Orbit 360' },
@@ -25,6 +25,8 @@ export function ControlPanel() {
   const [collapsed, setCollapsed] = useState(false);
   const cameraPreset = useStudio((s) => s.cameraPreset);
   const setCameraPreset = useStudio((s) => s.setCameraPreset);
+  const upperBodyOnly = useStudio((s) => s.tracking.upperBodyOnly);
+  const setTracking = useStudio((s) => s.setTracking);
   const showStats = useStudio((s) => s.showStats);
   const setShowStats = useStudio((s) => s.setShowStats);
   const statusPlacement = useStudio((s) => s.statusPlacement);
@@ -57,10 +59,20 @@ export function ControlPanel() {
         <Section title="Camera & view" icon={<Camera size={14} />} defaultOpen={false}>
           <div className="camera-row">
             {CAMERA_PRESETS.map((p) => (
-              <button key={p.id} className={`btn small ${cameraPreset === p.id ? 'primary' : ''}`} onClick={() => setCameraPreset(p.id)}>{p.label}</button>
+              <button key={p.id} className={`btn small ${cameraPreset === p.id ? 'primary' : ''}`} onClick={() => {
+                setCameraPreset(p.id);
+                if (p.id === 'upper') setTracking({ upperBodyOnly: true });
+                if (p.id === 'full') setTracking({ upperBodyOnly: false });
+              }}>{p.label}</button>
             ))}
           </div>
-          <div className="hint">Drag to orbit, scroll to zoom, right-drag to pan. Any manual move switches to free camera.</div>
+          <Row label="Waist-up only" hint="Zooms to the waist and tracks the spine, head, arms, hands and face. Legs stay standing, so a step or a crouch does not move them.">
+            <Toggle value={upperBodyOnly} onChange={(v) => {
+              setTracking({ upperBodyOnly: v });
+              setCameraPreset(v ? 'upper' : 'full');
+            }} />
+          </Row>
+          <div className="hint">Drag to orbit, scroll to zoom, right-drag to pan. Any manual move switches to free camera; waist-up tracking stays on until you turn it off.</div>
           <Row label="Tracking status"><Select value={statusPlacement} options={STATUS_PLACEMENTS} onChange={setStatusPlacement} /></Row>
           <Row label="Performance stats"><Toggle value={showStats} onChange={setShowStats} /></Row>
         </Section>

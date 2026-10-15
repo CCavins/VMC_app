@@ -40,7 +40,8 @@ plays a stand-and-wave with no phone connected. Turn it off to see the real idle
 ## What you can do
 
 - Switch characters (people, animals, and anything you drop in) without stopping the stream.
-- Orbit, zoom and pan the camera, or jump to full-body / waist / close-up presets.
+- Orbit, zoom and pan the camera, or jump to full-body / waist / face presets. **Waist-up only**
+  frames the waist and tracks the spine, head, arms, hands and face; the legs stay standing.
 - Swap podium styles (cyber, marble, broadcast, minimal, or your own GLB stage), surface
   textures and HDRI lighting.
 - When the phone loses the person, the character waits (Idle delay), then eases into an
@@ -54,10 +55,12 @@ plays a stand-and-wave with no phone connected. Turn it off to see the real idle
 Bundled free models are downloaded into `public/models/` by `npm run assets` (not committed;
 they are fetched again in the Pages build):
 
-- VRM people: Seed-san, two VRoid samples, Alicia Solid, a VRM 1.0 mannequin
-- Adult male CC0 avatars: Baldman, Bizdude, Astronaut, Cool Pirate, Old Moustache
-  (Polygonal Mind *100 Avatars*, via [open-source-avatars](https://github.com/ToxSam/open-source-avatars))
-- Mixamo rigs: Xbot, Michelle
+- Faces that blink and move the mouth: Seed-san, three VRoid samples, Alicia Solid, and the
+  hinzka Perfect Sync male and female bodies (all 52 ARKit shapes, so eyelids and speech
+  shapes follow the phone)
+- Other people: a VRM 1.0 mannequin, Mixamo's Xbot and Michelle, and CC0 stylised men
+  (Baldman, Bizdude, Astronaut, Cool Pirate, Old Moustache) from Polygonal Mind's *100 Avatars*
+  via [open-source-avatars](https://github.com/ToxSam/open-source-avatars)
 - CC0 creatures: two bears, tiger, wolf, fox, rabbit, penguin, shark, cat
 
 Drag a `.vrm`, `.glb`, `.gltf` or `.fbx` onto the window, or use **Import**. Rigs are mapped

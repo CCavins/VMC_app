@@ -30,6 +30,9 @@ turns the whole body. Finger and eye bones can be toggled off.
 
 Only bone **rotations** drive the body. Hips translation is replaced by podium placement:
 
+- **Waist-up only** skips the leg chain (upper leg, knee, foot, toes) while someone is
+  tracked, so the legs stay in the standing rest pose. The camera preset frames from the
+  hips to just over the head. Idle animations still use the legs.
 - **Horizontal follow** 0 pins the hips over the podium centre. Higher values let the
   character drift with the performer.
 - **Foot grounding** measures the lowest sole each frame and keeps it on the podium top,

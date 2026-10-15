@@ -13,6 +13,9 @@ Drop your own `.vrm`, `.glb`, `.gltf` or `.fbx` characters in here (and add them
   VRM avatars (Polygonal Mind "100 Avatars" R1-R3: bears, tiger, wolf, fox, rabbit,
   penguin, shark, cow, pig, frog, cat, dinosaur, ... plus stylised adult men). Direct
   `.vrm` links; the animals and the adult male avatars bundled here come from this registry.
+- https://github.com/hinzka/52blendshapes-for-VRoid-face - male and female VRoid bodies
+  with all 52 ARKit blendshapes (blink, gaze, jaw, visemes). The Perfect Sync characters
+  bundled here come from that release. Credit hinzka and the VRoid sample terms.
 - https://hub.vroid.com - search "kemono" / "furry" / "bear"; check each model's
   download + use permissions (many are view-only).
 - https://booth.pm - free VRM/VRChat "kemono" avatars (e.g. Kumagurumi bear by Usaneko,

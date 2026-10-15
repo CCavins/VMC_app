@@ -54,7 +54,8 @@ export function CharacterPanel() {
     : status === 'error' ? <Pill tone="bad">error</Pill> : <Pill>none</Pill>;
 
   const groups: { title: string; items: typeof characters }[] = [
-    { title: 'People', items: characters.filter((c) => !c.uploaded && (!c.category || c.category === 'person')) },
+    { title: 'Faces — blink and mouth', items: characters.filter((c) => !c.uploaded && (!c.category || c.category === 'person') && c.hasBlendshapes) },
+    { title: 'People', items: characters.filter((c) => !c.uploaded && (!c.category || c.category === 'person') && !c.hasBlendshapes) },
     { title: 'Animals & creatures', items: characters.filter((c) => !c.uploaded && c.category === 'animal') },
     { title: 'Imported', items: characters.filter((c) => c.uploaded) },
   ].filter((g) => g.items.length > 0);
@@ -62,7 +63,7 @@ export function CharacterPanel() {
   const card = (c: (typeof characters)[number]) => (
     <button key={c.id} className={`char-card ${c.id === characterId ? 'active' : ''}`} onClick={() => select(c.id)} title={c.description}>
       <span className="char-name">{c.name}</span>
-      <span className="char-meta">{c.format.toUpperCase()}{c.uploaded ? ' - uploaded' : ''}</span>
+      <span className="char-meta">{c.format.toUpperCase()}{c.hasBlendshapes ? ' · face' : ''}{c.uploaded ? ' · uploaded' : ''}</span>
     </button>
   );
 

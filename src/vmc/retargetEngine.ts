@@ -44,6 +44,8 @@ export interface RetargetSettings {
   applyFace: boolean;
   applyEyes: boolean;
   applyRootRotation: boolean;
+  /** Live tracking drives spine, head, arms and face only; legs stay in the standing rest pose. */
+  upperBodyOnly: boolean;
   yawOffsetDeg: number;
   faceGain: number;
   /** Play a procedural idle animation when tracking is lost. */
@@ -74,6 +76,10 @@ export interface BoundCharacter {
 }
 
 const FINGER_RE = /Thumb|Index|Middle|Ring|Little/;
+const LEG_BONES = new Set<HumanoidBone>([
+  'LeftUpperLeg', 'LeftLowerLeg', 'LeftFoot', 'LeftToes',
+  'RightUpperLeg', 'RightLowerLeg', 'RightFoot', 'RightToes',
+]);
 
 const _q = new THREE.Quaternion();
 const _q2 = new THREE.Quaternion();
@@ -281,7 +287,7 @@ export class Retargeter {
         else if (mode === 'dance' && useClips) this.dance.skip();
       }
       const idle = makeIdleFrame(this.idleClock, { energy: s.idleEnergy, mode, externalDance: useClips });
-      this.composeNormWorld(idle, { ...s, mirror: false, applyRootRotation: false });
+      this.composeNormWorld(idle, { ...s, mirror: false, applyRootRotation: false, upperBodyOnly: false });
       // Root motion produced by the idle: lateral pelvis sway (Unity +X = model right =
       // our -X), plus lift / airborne for hops and flips.
       const sc = this.char.model.scale.y || 1;
@@ -384,7 +390,8 @@ export class Retargeter {
       const src = lookup(b);
       const skipFingers = !s.applyFingers && FINGER_RE.test(b);
       const skipEyes = !s.applyEyes && (b === 'LeftEye' || b === 'RightEye');
-      if (src && !skipFingers && !skipEyes) {
+      const skipLegs = s.upperBodyOnly && LEG_BONES.has(b);
+      if (src && !skipFingers && !skipEyes && !skipLegs) {
         unityToThree(src, _q, s.mirror);
         world.multiply(_q);
       }

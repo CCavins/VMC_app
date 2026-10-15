@@ -31,8 +31,9 @@ export function CameraRig({ podiumTopY }: { podiumTopY: number }) {
         pos.set(h * 0.9, base + h * 0.6, h * 1.75);
         break;
       case 'upper':
-        target.set(0, base + h * 0.78, 0);
-        pos.set(0.2, base + h * 0.85, h * 0.95);
+        // Waist-up: frame runs from about the hips to just over the head.
+        target.set(0, base + h * 0.74, 0);
+        pos.set(0.12, base + h * 0.78, h * 0.85);
         break;
       case 'face':
         target.set(0, base + h * 0.92, 0);

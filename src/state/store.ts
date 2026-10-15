@@ -77,6 +77,8 @@ export interface TrackingSettings {
   applyFace: boolean;
   applyEyes: boolean;
   applyRootRotation: boolean;
+  /** Track spine, head, arms and face only, and frame the camera at the waist. */
+  upperBodyOnly: boolean;
   yawOffsetDeg: number;        // rotate whole character around Y
   scale: number;
   faceGain: number;
@@ -206,6 +208,7 @@ export const DEFAULT_TRACKING: TrackingSettings = {
   applyFace: true,
   applyEyes: true,
   applyRootRotation: true,
+  upperBodyOnly: false,
   yawOffsetDeg: 0,
   scale: 1,
   faceGain: 1,
@@ -270,7 +273,7 @@ export const useStudio = create<StudioState>((set, get) => {
     characterStatus: 'idle', characterError: null, characterInfo: null,
     tracking: persisted.tracking ?? DEFAULT_TRACKING,
     env: persisted.env ?? ENV_PRESETS.cyber,
-    cameraPreset: 'full',
+    cameraPreset: persisted.tracking?.upperBodyOnly ? 'upper' : 'full',
     showSkeleton: false,
     showStats: false,
     statusPlacement: persisted.statusPlacement ?? 'sidebar',

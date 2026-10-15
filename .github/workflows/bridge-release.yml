@@ -15,11 +15,9 @@ jobs:
       matrix:
         include:
           - os: macos-14
-            artifact: VMC-Bridge-mac-arm64
-          - os: macos-13
-            artifact: VMC-Bridge-mac-x64
+            targets: native darwin-x64
           - os: windows-latest
-            artifact: VMC-Bridge-windows-x64
+            targets: native
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -28,11 +26,18 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci --ignore-scripts
-      - run: node scripts/buildBridge.mjs
+      - name: Build
+        shell: bash
+        run: |
+          for t in ${{ matrix.targets }}; do
+            if [ "$t" = native ]; then node scripts/buildBridge.mjs
+            else BRIDGE_TARGET="$t" node scripts/buildBridge.mjs
+            fi
+          done
       - uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.artifact }}
-          path: dist-bridge/${{ matrix.artifact }}.zip
+          name: bridge-${{ matrix.os }}
+          path: dist-bridge/VMC-Bridge-*.zip
 
   release:
     needs: build

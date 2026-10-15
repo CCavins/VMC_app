@@ -4,6 +4,9 @@
  */
 import { chmod, copyFile, mkdir, rm, writeFile } from 'node:fs/promises';
 import { spawnSync } from 'node:child_process';
+import { createWriteStream } from 'node:fs';
+import { Readable } from 'node:stream';
+import { pipeline } from 'node:stream/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import esbuild from 'esbuild';
@@ -12,9 +15,32 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const outDir = path.join(root, 'dist-bridge');
 const bundle = path.join(outDir, 'vmc-bridge.cjs');
 const blob = path.join(outDir, 'sea-prep.blob');
-const platform = process.platform;
-const arch = process.arch;
+const hostPlatform = process.platform;
+const hostArch = process.arch;
+const target = process.env.BRIDGE_TARGET || `${hostPlatform}-${hostArch}`;
+const [platform, arch] = target.split('-');
 const FUSE = 'NODE_SEA_FUSE_fce680ab2cc467b6e072b8b5df1996b2';
+
+/** Node binary of the same version as this process, for the target OS. */
+async function nodeBinary() {
+  if (platform === hostPlatform && arch === hostArch) return process.execPath;
+  const ver = process.version;
+  const plat = platform === 'win32' ? 'win' : platform;
+  const folder = `node-${ver}-${plat}-${arch}`;
+  const archive = platform === 'win32' ? `${folder}.zip` : `${folder}.tar.gz`;
+  const url = `https://nodejs.org/dist/${ver}/${archive}`;
+  const dest = path.join(outDir, archive);
+  const res = await fetch(url);
+  if (!res.ok || !res.body) throw new Error(`Could not download ${url} (HTTP ${res.status})`);
+  await pipeline(Readable.fromWeb(res.body), createWriteStream(dest));
+  const extract = path.join(outDir, 'node-bin');
+  await mkdir(extract, { recursive: true });
+  if (archive.endsWith('.zip')) run('unzip', ['-q', dest, '-d', extract]);
+  else run('tar', ['-xzf', dest, '-C', extract]);
+  return platform === 'win32'
+    ? path.join(extract, folder, 'node.exe')
+    : path.join(extract, folder, 'bin', 'node');
+}
 
 const README = `VMC Bridge
 =========
@@ -57,7 +83,6 @@ const key = `${platform}-${arch}`;
 const product = names[key];
 if (!product) throw new Error(`No VMC Bridge build for ${key}. Use macOS (arm64 or x64) or Windows x64.`);
 
-await rm(outDir, { recursive: true, force: true });
 await mkdir(outDir, { recursive: true });
 
 await esbuild.build({
@@ -80,7 +105,7 @@ run(process.execPath, ['--experimental-sea-config', path.join(outDir, 'sea-confi
 
 const binName = platform === 'win32' ? 'vmc-bridge.exe' : 'vmc-bridge';
 const bin = path.join(outDir, binName);
-await copyFile(process.execPath, bin);
+await copyFile(await nodeBinary(), bin);
 if (platform === 'darwin') run('codesign', ['--remove-signature', bin]);
 
 const postject = path.join(root, 'node_modules', 'postject', 'dist', 'cli.js');

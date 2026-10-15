@@ -1,0 +1,40 @@
+{
+  "name": "vmc-podium-studio",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Real-time VMC motion capture studio: receives body/finger/face tracking over UDP and drives rigged 3D characters standing on customizable podiums.",
+  "scripts": {
+    "dev": "concurrently -k -n server,web -c cyan,magenta \"npm run server\" \"vite\"",
+    "server": "tsx watch server/index.ts",
+    "web": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "assets": "node scripts/downloadAssets.mjs",
+    "postinstall": "node scripts/downloadAssets.mjs || true"
+  },
+  "dependencies": {
+    "@pixiv/three-vrm": "^3.3.0",
+    "@react-three/drei": "^10.0.0",
+    "@react-three/fiber": "^9.1.0",
+    "lucide-react": "^0.475.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "three": "^0.173.0",
+    "three-stdlib": "^2.35.0",
+    "ws": "^8.18.0",
+    "zustand": "^5.0.15"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@types/three": "^0.173.0",
+    "@types/ws": "^8.5.14",
+    "@vitejs/plugin-react": "^4.3.4",
+    "concurrently": "^9.1.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3",
+    "vite": "^6.1.0"
+  }
+}

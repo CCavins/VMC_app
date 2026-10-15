@@ -1,0 +1,14 @@
+node_modules
+dist
+.netlify
+.DS_Store
+*.log
+# Downloaded sample assets (re-fetch with `npm run assets`)
+public/models/*
+!public/models/.gitkeep
+!public/models/README.md
+public/environments/*
+!public/environments/.gitkeep
+!public/environments/README.md
+public/animations/*
+!public/animations/README.md

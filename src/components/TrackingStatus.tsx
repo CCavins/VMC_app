@@ -9,7 +9,7 @@ export function useTrackingStatus() {
   const tel = useStudio((s) => s.telemetry);
   const trackingState = useStudio((s) => s.trackingState);
   const receiving = fps > 0 || (tel?.lastPacketAgeMs ?? Infinity) < 1500;
-  const label = bridgeAvailable === false ? 'preview - live tracking needs the local app'
+  const label = bridgeAvailable === false ? 'preview - start the VMC Bridge to track'
     : !wsConnected ? 'bridge offline - run npm run dev'
     : trackingState === 'tracking' ? `tracking - ${fps} fps`
     : trackingState === 'idle' ? (receiving ? 'idle - no person in frame' : 'idle - no VMC data')

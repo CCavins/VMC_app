@@ -124,7 +124,7 @@ export default function App() {
         {statusPlacement === 'viewport' && <TrackingStatus variant="viewport" />}
         {bridgeAvailable === false && (
           <div className="static-banner">
-            Hosted preview. Characters, dances and the podium work here. Live phone tracking needs this app running on your computer (<code>npm run dev</code>).
+            Hosted preview. Characters, dances and the podium work here. For live tracking, download the VMC Bridge from the Network panel and leave it running.
           </div>
         )}
       </div>

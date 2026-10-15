@@ -30,6 +30,8 @@ a { color: var(--accent); }
   pointer-events: none;
 }
 .static-banner code { color: var(--accent); }
+.bridge-download { display: flex; flex-direction: column; gap: 8px; }
+.bridge-download .btn { text-decoration: none; }
 
 .status-overlay {
   position: absolute; left: 14px; top: 12px; display: flex; align-items: center; gap: 8px;

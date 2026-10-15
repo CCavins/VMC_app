@@ -8,6 +8,7 @@ import { decodeFrame } from '../../shared/frameCodec';
 import type { BridgeConfig, ClientMessage, ServerMessage, VmcFrame } from '../../shared/protocol';
 import { useStudio } from '../state/store';
 import { publicUrl } from '../publicUrl';
+import { LOCAL_BRIDGE_HTTP, LOCAL_BRIDGE_WS } from './localBridge';
 
 export interface FrameSink {
   /** Latest frame; consumers should null it out after applying to avoid re-applying. */
@@ -30,17 +31,34 @@ function closeSocket() {
   socket = null;
 }
 
+/** Base URL of the bridge the page is talking to. Empty until a probe succeeds. */
+let bridgeHttpBase = '';
+
 export function sendBridgeConfig(config: Partial<BridgeConfig>) {
   const msg: ClientMessage = { type: 'setConfig', config };
   if (socket && socket.readyState === WebSocket.OPEN) {
     socket.send(JSON.stringify(msg));
-  } else {
-    // Fallback when the socket is down: use HTTP.
-    fetch(publicUrl('/api/config'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(config) }).catch(() => {});
+  } else if (bridgeHttpBase) {
+    fetch(`${bridgeHttpBase}/api/config`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(config) }).catch(() => {});
   }
 }
 
-function wsUrl() {
+const retryListeners = new Set<() => void>();
+/** Ask the hook to look for a bridge again (after the user starts the downloaded app). */
+export function retryBridgeConnection() {
+  for (const fn of retryListeners) fn();
+}
+
+async function probe(url: string): Promise<boolean> {
+  try {
+    const res = await fetch(url, { signal: AbortSignal.timeout(1500) });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+function sameOriginWs() {
   const proto = location.protocol === 'https:' ? 'wss' : 'ws';
   return `${proto}://${location.host}/ws`;
 }
@@ -60,10 +78,13 @@ export function useVmcBridge() {
       fpsCounter = 0;
     }, 1000);
 
+    let socketUrl = '';
+    let local = false;
+
     const connect = () => {
-      if (disposed || generation !== connectionGeneration) return;
+      if (disposed || generation !== connectionGeneration || !socketUrl) return;
       closeSocket();
-      const ws = new WebSocket(wsUrl());
+      const ws = new WebSocket(socketUrl);
       ws.binaryType = 'arraybuffer';
       socket = ws;
 
@@ -74,9 +95,14 @@ export function useVmcBridge() {
       ws.onclose = () => {
         setBridge({ wsConnected: false });
         if (socket === ws) socket = null;
-        if (!disposed) {
+        if (disposed || generation !== connectionGeneration) return;
+        // The dev server stays up, so keep trying. The downloadable bridge is a
+        // window the user can close; don't hammer 127.0.0.1 after it goes away.
+        if (!local) {
           window.setTimeout(connect, retryRef.current);
           retryRef.current = Math.min(8000, retryRef.current * 1.6);
+        } else {
+          window.setTimeout(() => { void locate(); }, 1200);
         }
       };
       ws.onerror = () => ws.close();
@@ -106,22 +132,40 @@ export function useVmcBridge() {
       };
     };
 
-    // Static hosts (GitHub Pages) have no UDP bridge. Probe once and stay quiet
-    // instead of reconnecting a WebSocket that can never open.
-    (async () => {
-      let available = false;
-      try {
-        const res = await fetch(publicUrl('/api/status'), { signal: AbortSignal.timeout(2000) });
-        available = res.ok;
-      } catch { available = false; }
-      if (disposed) return;
-      setBridge({ bridgeAvailable: available });
-      if (available) connect();
-    })();
+    // Same-origin first (npm run dev). Otherwise the downloadable bridge on loopback,
+    // which an HTTPS page is allowed to reach. One probe, no reconnect storm.
+    const locate = async () => {
+      if (disposed || generation !== connectionGeneration) return;
+      if (await probe(publicUrl('/api/status'))) {
+        bridgeHttpBase = publicUrl('/api').replace(/\/api$/, '') || location.origin;
+        socketUrl = sameOriginWs();
+        local = false;
+        setBridge({ bridgeAvailable: true, localBridge: false });
+        connect();
+        return;
+      }
+      if (await probe(`${LOCAL_BRIDGE_HTTP}/api/status`)) {
+        bridgeHttpBase = LOCAL_BRIDGE_HTTP;
+        socketUrl = LOCAL_BRIDGE_WS;
+        local = true;
+        setBridge({ bridgeAvailable: true, localBridge: true });
+        connect();
+        return;
+      }
+      bridgeHttpBase = '';
+      socketUrl = '';
+      local = false;
+      closeSocket();
+      setBridge({ bridgeAvailable: false, localBridge: false, wsConnected: false });
+    };
+
+    retryListeners.add(locate);
+    void locate();
 
     return () => {
       disposed = true;
       window.clearInterval(fpsTimer);
+      retryListeners.delete(locate);
       if (generation === connectionGeneration) closeSocket();
     };
   }, [setBridge]);

@@ -4,6 +4,7 @@
  * small JSON control channel (WebSocket + HTTP) to reconfigure the listening
  * port / bind address / sender IP filter at runtime and to report telemetry.
  */
+import { spawn } from 'node:child_process';
 import dgram from 'node:dgram';
 import http from 'node:http';
 import os from 'node:os';
@@ -272,11 +273,19 @@ async function applyConfig(patch: Partial<BridgeConfig>) {
 // HTTP + WebSocket
 // ----------------------------------------------------------------------------
 
-const httpServer = http.createServer(async (req, res) => {
-  const url = new URL(req.url ?? '/', `http://${req.headers.host}`);
-  res.setHeader('Access-Control-Allow-Origin', '*');
+function cors(req: http.IncomingMessage, res: http.ServerResponse) {
+  // Echo the origin. Chrome's local-network check rejects Access-Control-Allow-Origin: *.
+  const origin = req.headers.origin;
+  res.setHeader('Access-Control-Allow-Origin', origin || '*');
+  res.setHeader('Vary', 'Origin');
+  res.setHeader('Access-Control-Allow-Private-Network', 'true');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+}
+
+const httpServer = http.createServer(async (req, res) => {
+  const url = new URL(req.url ?? '/', `http://${req.headers.host}`);
+  cors(req, res);
   if (req.method === 'OPTIONS') { res.writeHead(204); return res.end(); }
 
   if (url.pathname === '/api/status') {
@@ -326,12 +335,54 @@ setInterval(() => {
   if (clients.size) broadcast(JSON.stringify({ type: 'telemetry', telemetry: telemetry() } satisfies ServerMessage));
 }, 1000);
 
-httpServer.listen(HTTP_PORT, () => {
-  console.log(`[bridge] http/ws on http://localhost:${HTTP_PORT}  (ws path /ws)`);
-  const ips = localAddresses().map((a) => `${a.address} (${a.iface})`).join(', ');
-  console.log(`[bridge] point your VMC sender at one of this machine's IPs: ${ips || 'none found'}`);
-  void startUdp().then(updateTestSignal);
-});
+export interface BridgeStartOptions {
+  /** Interface for the browser socket. The downloadable bridge uses 127.0.0.1. */
+  host?: string;
+  /** Print phone instructions and open the deployed site. */
+  companion?: boolean;
+  openBrowser?: boolean;
+  pageUrl?: string;
+}
+
+export function startBridge(opts: BridgeStartOptions = {}) {
+  const pageUrl = opts.pageUrl || process.env.BRIDGE_PAGE || 'https://ccavins.github.io/VMC_app/';
+  const onListen = () => {
+    const where = opts.host ? `${opts.host}:${HTTP_PORT}` : `port ${HTTP_PORT}`;
+    console.log(`[bridge] http/ws on ${where}  (ws path /ws)`);
+    const ips = localAddresses();
+    if (opts.companion) {
+      console.log('');
+      console.log('VMC Bridge is running. Leave this window open.');
+      console.log('');
+      console.log('On the phone\'s VMC app, set the destination to one of these addresses');
+      console.log(`and port ${config.listenPort}:`);
+      if (ips.length) for (const a of ips) console.log(`  ${a.address}   (${a.iface})`);
+      else console.log('  (no network address found — connect this computer to Wi-Fi)');
+      console.log('');
+      console.log('Then use the studio page. It connects to this bridge on its own:');
+      console.log(`  ${pageUrl}`);
+      console.log('');
+      if (opts.openBrowser !== false) openPage(pageUrl);
+    } else {
+      console.log(`[bridge] point your VMC sender at one of this machine's IPs: ${ips.map((a) => `${a.address} (${a.iface})`).join(', ') || 'none found'}`);
+    }
+    void startUdp().then(updateTestSignal);
+  };
+  if (opts.host) httpServer.listen(HTTP_PORT, opts.host, onListen);
+  else httpServer.listen(HTTP_PORT, onListen);
+}
+
+function openPage(url: string) {
+  try {
+    if (process.platform === 'win32') spawn('cmd', ['/c', 'start', '', url], { detached: true, stdio: 'ignore', windowsHide: true }).unref();
+    else spawn(process.platform === 'darwin' ? 'open' : 'xdg-open', [url], { detached: true, stdio: 'ignore' }).unref();
+  } catch { /* the printed URL is enough */ }
+}
+
+// Started directly with `tsx server/index.ts` or `npm run server`. The downloadable
+// bridge imports startBridge instead, so this does not run inside that bundle.
+const invokedDirectly = process.argv[1] && /[/\\]server[/\\]index\.ts$/.test(process.argv[1]);
+if (invokedDirectly) startBridge();
 
 const shutdown = () => { void closeUdp().then(() => process.exit(0)); };
 process.on('SIGINT', shutdown);

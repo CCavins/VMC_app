@@ -123,8 +123,10 @@ export interface StudioState {
   bridgeConfig: BridgeConfig | null;
   telemetry: BridgeTelemetry | null;
   wsConnected: boolean;
-  /** False on static hosting (GitHub Pages), where the UDP bridge cannot run. */
+  /** False when neither the dev server nor a local VMC Bridge answered. */
   bridgeAvailable: boolean | null;
+  /** True when the page is connected to the downloadable bridge on 127.0.0.1. */
+  localBridge: boolean;
   frameFps: number;
   lastFrame: { bones: number; blends: number; at: number } | null;
   /** Live rig state reported by the retargeter. */
@@ -149,7 +151,7 @@ export interface StudioState {
   setShowSkeleton: (v: boolean) => void;
   setShowStats: (v: boolean) => void;
   setStatusPlacement: (p: StatusPlacement) => void;
-  setBridge: (p: Partial<Pick<StudioState, 'bridgeConfig' | 'telemetry' | 'wsConnected' | 'frameFps' | 'lastFrame' | 'bridgeAvailable'>>) => void;
+  setBridge: (p: Partial<Pick<StudioState, 'bridgeConfig' | 'telemetry' | 'wsConnected' | 'frameFps' | 'lastFrame' | 'bridgeAvailable' | 'localBridge'>>) => void;
   calibrateRequested: number;
   requestCalibrate: () => void;
 }
@@ -277,7 +279,7 @@ export const useStudio = create<StudioState>((set, get) => {
     showSkeleton: false,
     showStats: false,
     statusPlacement: persisted.statusPlacement ?? 'sidebar',
-    bridgeConfig: null, telemetry: null, wsConnected: false, bridgeAvailable: null, frameFps: 0, lastFrame: null,
+    bridgeConfig: null, telemetry: null, wsConnected: false, bridgeAvailable: null, localBridge: false, frameFps: 0, lastFrame: null,
     trackingState: 'waiting',
     setTrackingState: (trackingState) => set({ trackingState }),
     danceClipName: null,

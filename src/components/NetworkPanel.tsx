@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Radio, Wifi, WifiOff } from 'lucide-react';
 import { useStudio } from '../state/store';
-import { sendBridgeConfig } from '../vmc/useVmcBridge';
+import { retryBridgeConnection, sendBridgeConfig } from '../vmc/useVmcBridge';
+import { BRIDGE_DOWNLOADS, suggestedBridgeDownload } from '../vmc/localBridge';
 import { Pill, Row, Section, Toggle } from './ui';
 
 export function NetworkPanel() {
@@ -9,6 +10,7 @@ export function NetworkPanel() {
   const tel = useStudio((s) => s.telemetry);
   const wsConnected = useStudio((s) => s.wsConnected);
   const bridgeAvailable = useStudio((s) => s.bridgeAvailable);
+  const localBridge = useStudio((s) => s.localBridge);
   const frameFps = useStudio((s) => s.frameFps);
   const lastFrame = useStudio((s) => s.lastFrame);
 
@@ -32,15 +34,17 @@ export function NetworkPanel() {
   const receiving = (tel?.lastPacketAgeMs ?? Infinity) < 1500 || frameFps > 0;
   const hosted = bridgeAvailable === false;
   const status = hosted ? 'warn' : !wsConnected ? 'bad' : tel?.error ? 'bad' : receiving ? 'good' : 'warn';
-  const statusText = hosted ? 'hosted preview' : !wsConnected ? 'bridge offline' : tel?.error ? 'socket error' : receiving ? `receiving ${frameFps} fps` : 'waiting for data';
+  const statusText = hosted ? 'needs the bridge app' : localBridge && wsConnected ? (receiving ? `bridge ${frameFps} fps` : 'local bridge') : !wsConnected ? 'bridge offline' : tel?.error ? 'socket error' : receiving ? `receiving ${frameFps} fps` : 'waiting for data';
   const filteringSelf = !!cfg && cfg.senderFilter !== '*' && (tel?.localAddresses ?? []).some((a) => a.address === cfg.senderFilter);
 
   return (
     <Section title="Network / VMC source" icon={<Radio size={14} />} badge={<Pill tone={status}>{statusText}</Pill>}>
       {hosted ? (
+        <BridgeDownload />
+      ) : localBridge ? (
         <div className="hint">
-          This copy is the hosted preview. Characters, dances and the podium all work, but a phone cannot send UDP to
-          GitHub Pages. Clone the repo and run <code>npm run dev</code> on a computer on the same Wi-Fi as the phone.
+          Connected to the VMC Bridge running on this computer. Point the phone at one of the addresses below.
+          Leave the bridge window open while you track.
         </div>
       ) : (
         <div className="hint">
@@ -94,5 +98,31 @@ export function NetworkPanel() {
         <Toggle value={!!cfg?.testSignal} onChange={(v) => sendBridgeConfig({ testSignal: v })} />
       </Row>
     </Section>
+  );
+}
+
+function BridgeDownload() {
+  const suggested = suggestedBridgeDownload();
+  return (
+    <div className="bridge-download">
+      <div className="hint">
+        This page cannot receive the phone's UDP stream. Download the VMC Bridge, unzip it, and run
+        <strong> Start VMC Bridge</strong>. Leave that window open. It prints the address to put in the phone's VMC app
+        (port 39539) and this page connects to it automatically.
+      </div>
+      <div className="button-row">
+        {BRIDGE_DOWNLOADS.map((d) => (
+          <a key={d.id} className={`btn ${d.id === suggested.id ? 'primary' : ''}`} href={d.href}>
+            {d.label}
+          </a>
+        ))}
+        <button className="btn" onClick={() => retryBridgeConnection()}>Connect</button>
+      </div>
+      <div className="hint">
+        macOS may block the first launch. Right-click <strong>Start VMC Bridge</strong> and choose Open.
+        On Windows, if SmartScreen appears choose More info, then Run anyway, and allow the firewall prompt on private networks.
+        Use Chrome, Edge, or Firefox. The browser has to be on the same computer as the bridge.
+      </div>
+    </div>
   );
 }

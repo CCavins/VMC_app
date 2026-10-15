@@ -12,3 +12,4 @@ public/environments/*
 !public/environments/README.md
 public/animations/*
 !public/animations/README.md
+dist-bridge

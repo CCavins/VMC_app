@@ -84,12 +84,19 @@ sooner than the metallic/roughness materials on the Mixamo GLBs, which is why th
 lights can wash out a human face and leave a mannequin looking fine. Preset intensities are
 kept low for that reason, and **Exposure** maps to `toneMappingExposure` on the renderer.
 
-## Why the hosted site has no tracking
+## Tracking from the hosted site
 
-GitHub Pages serves the built static files only. There is no process to bind a UDP port.
-On load the page requests `/api/status` once. If that 404s it does not open a WebSocket
-(so the console stays quiet) and shows a preview banner. `npm run dev` is the supported
-way to track.
+GitHub Pages cannot bind a UDP port, and an HTTPS page cannot open `ws://` to a LAN
+address. It can open `ws://127.0.0.1`, which is what the downloadable bridge uses.
+
+`bridge-app/main.ts` is the same relay as `server/`, bound to loopback for the browser
+and to every network interface for the phone. The Network panel links to the Mac and
+Windows builds produced by `.github/workflows/bridge-release.yml`. Chrome, Edge and
+Firefox allow that loopback socket after a local-network prompt. The browser and the
+bridge have to be on the same computer; the phone only sends UDP to the computer's
+LAN address, port 39539.
+
+`npm run dev` still runs the bridge and the page together for development.
 
 The Pages workflow (`.github/workflows/pages.yml`) runs `npm run assets` before the build,
 because the model, HDRI and animation files are gitignored and downloaded from their

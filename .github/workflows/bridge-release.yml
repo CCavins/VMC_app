@@ -1,0 +1,50 @@
+name: Build VMC Bridge
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ['bridge-v*']
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-14
+            artifact: VMC-Bridge-mac-arm64
+          - os: macos-13
+            artifact: VMC-Bridge-mac-x64
+          - os: windows-latest
+            artifact: VMC-Bridge-windows-x64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: node scripts/buildBridge.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: dist-bridge/${{ matrix.artifact }}.zip
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: zips
+      - name: Publish the downloadable bridge
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="bridge-v0.1.0"
+          gh release view "$tag" >/dev/null 2>&1 || gh release create "$tag" --title "VMC Bridge 0.1.0" --notes "Downloadable helper that forwards a phone's VMC tracking to https://ccavins.github.io/VMC_app/"
+          gh release upload "$tag" zips/*/*.zip --clobber
